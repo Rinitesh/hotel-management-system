@@ -92,6 +92,9 @@ void HotelManager::updateRoomStatus(int roomNumber, models::RoomStatus status) {
 }
 
 models::Guest& HotelManager::registerGuest(std::string name, std::string email, std::string phone, std::string idProof) {
+    if (name.empty()) {
+        throw InvalidOperationException("Guest name cannot be empty.");
+    }
     std::string guestId = utils::DateTimeUtils::generateId("GST");
     models::Guest guest(guestId, std::move(name), std::move(email), std::move(phone), std::move(idProof), false, 0, 0);
     guests_[guestId] = guest;
@@ -240,7 +243,7 @@ void HotelManager::cancelReservation(const std::string& reservationId) {
     }
 
     auto* room = getRoom(res->getRoomNumber());
-    if (room && room->getStatus() == models::RoomStatus::Reserved) {
+    if (room && (room->getStatus() == models::RoomStatus::Reserved || room->getStatus() == models::RoomStatus::Occupied)) {
         room->setStatus(models::RoomStatus::Available);
     }
 

@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cmath>
 #include <memory>
+#include <filesystem>
 #include "Patterns/RoomFactory.hpp"
 #include "Patterns/PricingStrategy.hpp"
 #include "Models/Guest.hpp"
@@ -171,6 +172,28 @@ void testHotelManagerIntegration() {
 
     auto* res = mgr.getReservation(resId);
     ASSERT_TRUE(res->isPaid(), "Reservation marked as paid after checkout");
+
+    // Test rejection of empty guest name
+    bool emptyGuestRejected = false;
+    try {
+        mgr.registerGuest("", "fake@domain.com", "123", "ID");
+    } catch (const InvalidOperationException&) {
+        emptyGuestRejected = true;
+    }
+    ASSERT_TRUE(emptyGuestRejected, "Empty guest name throws InvalidOperationException");
+
+    // Test reservation cancellation
+    std::string cancelResId = mgr.createReservation(guest.getId(), 901, "2026-12-10", "2026-12-12");
+    r901 = mgr.getRoom(901);
+    ASSERT_TRUE(r901->getStatus() == RoomStatus::Reserved, "Room 901 status is Reserved for cancellation test");
+    mgr.cancelReservation(cancelResId);
+    r901 = mgr.getRoom(901);
+    ASSERT_TRUE(r901->getStatus() == RoomStatus::Available, "Room 901 returned to Available after cancellation");
+    auto* cancelRes = mgr.getReservation(cancelResId);
+    ASSERT_TRUE(cancelRes->getStatus() == ReservationStatus::Cancelled, "Reservation marked Cancelled");
+
+    // Clean up temporary test data directory
+    std::filesystem::remove_all("data_test");
 }
 
 int main() {

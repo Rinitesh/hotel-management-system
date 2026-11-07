@@ -76,6 +76,11 @@ void handleBookRoom(HotelManager& manager) {
     if (!guest) {
         TerminalUI::printInfo("Guest not found. Let's register the guest first.");
         std::string name = TerminalUI::readLine("Full Name: ");
+        if (name.empty()) {
+            TerminalUI::printError("Guest name cannot be empty. Booking aborted.");
+            TerminalUI::pause();
+            return;
+        }
         std::string email = TerminalUI::readLine("Email: ");
         std::string phone = TerminalUI::readLine("Phone: ");
         std::string idProof = TerminalUI::readLine("ID Proof: ");

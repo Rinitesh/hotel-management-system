@@ -2,7 +2,7 @@
 
 [![Language: C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg?style=flat&logo=c%2B%2B)](https://en.cppreference.com/w/cpp/17)
 [![Build System: CMake](https://img.shields.io/badge/Build-CMake%203.16+-orange.svg?logo=cmake)](https://cmake.org)
-[![Tests: 39 Passed](https://img.shields.io/badge/Tests-39%2F39%20Passing-brightgreen.svg)](#test-suite)
+[![Tests: 43 Passed](https://img.shields.io/badge/Tests-43%2F43%20Passing-brightgreen.svg)](#test-suite)
 [![Platform: macOS / Linux / Windows](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)](#installation--build)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -137,7 +137,7 @@ This project was built specifically to showcase clean, production-level C++ engi
 │   │   └── TerminalUI.cpp
 │   └── main.cpp                # Interactive CLI application
 ├── tests/
-│   └── test_hotel.cpp          # Comprehensive unit test suite (39 tests)
+│   └── test_hotel.cpp          # Comprehensive unit test suite (43 tests)
 └── data/                       # Persistent database files
     ├── rooms.csv
     ├── guests.csv
