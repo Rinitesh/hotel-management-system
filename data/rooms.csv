@@ -1,0 +1,13 @@
+RoomNumber,Type,BaseRate,Status
+101,Standard,80,Available
+102,Standard,80,Available
+103,Standard,85,Occupied
+104,Standard,80,Maintenance
+201,Deluxe,150,Available
+202,Deluxe,150,Occupied
+203,Deluxe,160,Reserved
+204,Deluxe,150,Available
+301,Suite,280,Available
+302,Suite,290,Occupied
+401,Presidential,650,Available
+402,Presidential,700,Reserved

@@ -1,0 +1,5 @@
+ReservationId,GuestId,RoomNumber,CheckInDate,CheckOutDate,NumberOfNights,RoomRatePerNight,Status,CreatedAt,RoomTotal,ServicesTotal,TaxAmount,DiscountAmount,GrandTotal,IsPaid,PaymentMethod,Services
+RES-20261101-1001,GST-1002,202,2026-11-05,2026-11-09,4,150,CheckedIn,2026-11-01 10:30:00,600,85,69.87,102.75,652.12,0,Pending,SRV-1|Executive Buffet Breakfast|35.000000|Dining|2026-11-06 08:30;SRV-2|Airport Luxury Shuttle|50.000000|Transport|2026-11-05 14:00
+RES-20261102-1002,GST-1003,302,2026-11-06,2026-11-10,4,290,CheckedIn,2026-11-02 16:15:00,1160,120,130.56,192,1218.56,0,Pending,SRV-3|Aromatherapy Full Spa Massage|120.000000|Spa|2026-11-07 11:00
+RES-20261104-1003,GST-1001,103,2026-11-07,2026-11-09,2,85,CheckedIn,2026-11-04 11:00:00,170,0,20.4,0,190.4,0,Pending,
+RES-20261105-1004,GST-1004,402,2026-11-12,2026-11-15,3,700,Confirmed,2026-11-05 09:20:00,2100,0,252,0,2352,0,Pending,
