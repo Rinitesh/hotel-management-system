@@ -47,6 +47,7 @@ public:
     [[nodiscard]] int getRoomNumber() const { return roomNumber_; }
     [[nodiscard]] RoomType getType() const { return type_; }
     [[nodiscard]] double getBaseRate() const { return baseRate_; }
+    [[nodiscard]] double getNightlyRateINR() const { return baseRate_; }
     [[nodiscard]] int getCapacity() const { return capacity_; }
     [[nodiscard]] RoomStatus getStatus() const { return status_; }
     [[nodiscard]] const std::vector<std::string>& getAmenities() const { return amenities_; }
@@ -54,6 +55,7 @@ public:
     // Setters
     void setStatus(RoomStatus newStatus) { status_ = newStatus; }
     void setBaseRate(double rate) { baseRate_ = rate; }
+    void setNightlyRateINR(double rate) { baseRate_ = rate; }
     void addAmenity(const std::string& amenity) { amenities_.push_back(amenity); }
 
 protected:

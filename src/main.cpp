@@ -124,7 +124,7 @@ void handleBookRoom(HotelManager& manager) {
 
     // Pricing rate selection
     std::cout << "\nSelect Rate Plan:\n";
-    std::cout << "  [1] Standard Rate ($" << selectedRoom->getBaseRate() << "/night)\n";
+    std::cout << "  [1] Standard Rate (INR " << static_cast<long long>(selectedRoom->getBaseRate()) << "/night)\n";
     std::cout << "  [2] Peak Season (+25% Holiday Surcharge)\n";
     std::cout << "  [3] Extended Stay Discount (for 7+ nights, 10% off)\n";
     if (guest->isVIP()) {
@@ -259,8 +259,8 @@ void handleCheckOut(HotelManager& manager) {
 
     try {
         manager.checkOutGuest(resId, paymentMethod);
-        TerminalUI::printSuccess("Checkout completed! Payment of $" +
-                                std::to_string(res->getGrandTotal()) + " recorded via " + paymentMethod);
+        TerminalUI::printSuccess("Checkout completed! Payment of INR " +
+                                std::to_string(static_cast<long long>(res->getGrandTotal())) + " recorded via " + paymentMethod);
         std::cout << "Room " << res->getRoomNumber() << " is now marked Available for cleaning/re-booking.\n";
     } catch (const std::exception& ex) {
         TerminalUI::printError(ex.what());
@@ -305,15 +305,15 @@ void handleAddRoom(HotelManager& manager) {
     }
 
     std::cout << "Room Category:\n";
-    std::cout << "  [1] Standard Room ($80/night default)\n";
-    std::cout << "  [2] Deluxe Room ($150/night default)\n";
-    std::cout << "  [3] Executive Suite ($280/night default)\n";
-    std::cout << "  [4] Presidential Suite ($650/night default)\n";
+    std::cout << "  [1] Standard Room (INR 1800/night default)\n";
+    std::cout << "  [2] Deluxe Room (INR 2600/night default)\n";
+    std::cout << "  [3] Executive Suite (INR 4200/night default)\n";
+    std::cout << "  [4] Presidential Suite (INR 8500/night default)\n";
     int typeChoice = TerminalUI::readInt("Select Category (1-4): ", 1, 4);
 
     RoomType rt = (typeChoice == 1 ? RoomType::Standard : (typeChoice == 2 ? RoomType::Deluxe : (typeChoice == 3 ? RoomType::Suite : RoomType::Presidential)));
 
-    double customRate = TerminalUI::readDouble("Nightly Rate USD (0 for default): ", 0.0, 10000.0);
+    double customRate = TerminalUI::readDouble("Nightly Rate INR (0 for default): ", 0.0, 100000.0);
     auto newRoom = RoomFactory::createRoom(roomNum, rt, (customRate > 0 ? customRate : -1.0));
 
     manager.addRoom(std::move(newRoom));

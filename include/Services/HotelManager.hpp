@@ -65,6 +65,10 @@ public:
     const std::vector<models::ServiceItem>& getAvailableServices() const { return availableServices_; }
     void orderService(const std::string& reservationId, const std::string& serviceId);
 
+    // ID Generators conforming to BKG-XXXX and GUEST-XXXX format
+    [[nodiscard]] std::string generateNextBookingId() const;
+    [[nodiscard]] std::string generateNextGuestId() const;
+
     // Analytics & Billing
     [[nodiscard]] AnalyticsReport getAnalytics() const;
     [[nodiscard]] std::string generateInvoice(const std::string& reservationId) const;

@@ -89,7 +89,7 @@ void TerminalUI::displayRoomsTable(const std::vector<const models::Room*>& rooms
                   << std::setw(8)  << room->getRoomNumber()
                   << std::setw(18) << room->getTypeName()
                   << std::setw(10) << (std::to_string(room->getCapacity()) + " guests")
-                  << std::setw(14) << ("$" + std::to_string(static_cast<int>(room->getBaseRate())) + ".00")
+                  << std::setw(14) << ("INR " + std::to_string(static_cast<int>(room->getBaseRate())))
                   << statusColor << std::setw(16) << models::roomStatusToString(room->getStatus()) << RESET
                   << GRAY << amenitiesStr << RESET << "\n";
     }
@@ -153,11 +153,11 @@ void TerminalUI::displayReservationsTable(const std::vector<models::Reservation>
 
         std::string statusColor = CYAN;
         if (res.getStatus() == models::ReservationStatus::CheckedIn) statusColor = GREEN;
-        else if (res.getStatus() == models::ReservationStatus::CheckedOut) statusColor = GRAY;
+        else if (res.getStatus() == models::ReservationStatus::Completed) statusColor = GRAY;
         else if (res.getStatus() == models::ReservationStatus::Cancelled) statusColor = RED;
 
         std::ostringstream amountStr;
-        amountStr << std::fixed << std::setprecision(2) << "$" << res.getGrandTotal();
+        amountStr << std::fixed << std::setprecision(0) << "INR " << res.getGrandTotal();
 
         std::cout << std::left
                   << std::setw(22) << res.getReservationId()
@@ -183,7 +183,7 @@ void TerminalUI::displayServicesCatalog(const std::vector<models::ServiceItem>& 
 
     for (const auto& s : services) {
         std::ostringstream pr;
-        pr << std::fixed << std::setprecision(2) << "$" << s.getPrice();
+        pr << std::fixed << std::setprecision(0) << "INR " << s.getPrice();
         std::cout << std::left
                   << std::setw(12) << s.getId()
                   << std::setw(16) << s.getCategory()
@@ -211,7 +211,7 @@ void TerminalUI::displayAnalyticsDashboard(const services::AnalyticsReport& repo
     std::cout << "    • Active In-House Guests: " << report.activeGuests << " guests\n";
     std::cout << "    • Total Bookings Handled: " << report.totalReservations << " reservations\n";
     std::cout << "    • Total Realized Revenue: " << GREEN << BOLD
-              << "$" << std::fixed << std::setprecision(2) << report.totalRevenue << RESET << "\n";
+              << "INR " << std::fixed << std::setprecision(0) << report.totalRevenue << RESET << "\n";
 }
 
 std::string TerminalUI::readLine(const std::string& prompt) {

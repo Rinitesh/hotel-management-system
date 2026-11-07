@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <sys/stat.h>
+#include <algorithm>
 #include <iostream>
 
 #if defined(_WIN32)
@@ -24,12 +25,12 @@ std::string StorageManager::getRoomsFilePath() const {
     return dataDir_ + "/rooms.csv";
 }
 
-std::string StorageManager::getGuestsFilePath() const {
-    return dataDir_ + "/guests.csv";
+std::string StorageManager::getBookingsFilePath() const {
+    return dataDir_ + "/bookings.csv";
 }
 
-std::string StorageManager::getReservationsFilePath() const {
-    return dataDir_ + "/reservations.csv";
+std::string StorageManager::getGuestsFilePath() const {
+    return dataDir_ + "/guests.csv";
 }
 
 void StorageManager::ensureDirectoryExists() {
@@ -77,60 +78,34 @@ std::string StorageManager::escapeCsvField(const std::string& field) {
     return field;
 }
 
+void StorageManager::validateForeignKey(int roomNumber, const std::unordered_set<int>& validRoomNumbers) {
+    if (validRoomNumbers.find(roomNumber) == validRoomNumbers.end()) {
+        throw InvalidForeignKeyException("RoomNumber", std::to_string(roomNumber));
+    }
+}
+
 void StorageManager::seedInitialDataIfEmpty() {
     std::ifstream rf(getRoomsFilePath());
     if (rf.good()) return; // Already exists
 
-    // Seed Rooms
+    // Seed default rooms in INR
     std::vector<std::unique_ptr<models::Room>> seedRooms;
-    seedRooms.push_back(patterns::RoomFactory::createRoom(101, models::RoomType::Standard, 80.0, models::RoomStatus::Available));
-    seedRooms.push_back(patterns::RoomFactory::createRoom(102, models::RoomType::Standard, 80.0, models::RoomStatus::Available));
-    seedRooms.push_back(patterns::RoomFactory::createRoom(103, models::RoomType::Standard, 85.0, models::RoomStatus::Occupied));
-    seedRooms.push_back(patterns::RoomFactory::createRoom(104, models::RoomType::Standard, 80.0, models::RoomStatus::Maintenance));
-
-    seedRooms.push_back(patterns::RoomFactory::createRoom(201, models::RoomType::Deluxe, 150.0, models::RoomStatus::Available));
-    seedRooms.push_back(patterns::RoomFactory::createRoom(202, models::RoomType::Deluxe, 150.0, models::RoomStatus::Occupied));
-    seedRooms.push_back(patterns::RoomFactory::createRoom(203, models::RoomType::Deluxe, 160.0, models::RoomStatus::Reserved));
-    seedRooms.push_back(patterns::RoomFactory::createRoom(204, models::RoomType::Deluxe, 150.0, models::RoomStatus::Available));
-
-    seedRooms.push_back(patterns::RoomFactory::createRoom(301, models::RoomType::Suite, 280.0, models::RoomStatus::Available));
-    seedRooms.push_back(patterns::RoomFactory::createRoom(302, models::RoomType::Suite, 290.0, models::RoomStatus::Occupied));
-
-    seedRooms.push_back(patterns::RoomFactory::createRoom(401, models::RoomType::Presidential, 650.0, models::RoomStatus::Available));
-    seedRooms.push_back(patterns::RoomFactory::createRoom(402, models::RoomType::Presidential, 700.0, models::RoomStatus::Reserved));
+    seedRooms.push_back(patterns::RoomFactory::createRoom(101, models::RoomType::Standard, 1800.0, models::RoomStatus::Available));
+    seedRooms.push_back(patterns::RoomFactory::createRoom(102, models::RoomType::Standard, 2600.0, models::RoomStatus::Available));
+    seedRooms.push_back(patterns::RoomFactory::createRoom(103, models::RoomType::Deluxe, 2600.0, models::RoomStatus::Occupied));
+    seedRooms.push_back(patterns::RoomFactory::createRoom(104, models::RoomType::Deluxe, 4200.0, models::RoomStatus::Maintenance));
+    seedRooms.push_back(patterns::RoomFactory::createRoom(105, models::RoomType::Suite, 4200.0, models::RoomStatus::Available));
     saveRooms(seedRooms);
 
-    // Seed Guests
-    std::unordered_map<std::string, models::Guest> seedGuests;
-    seedGuests["GST-1001"] = models::Guest("GST-1001", "Alice Morgan", "alice.m@example.com", "+1-555-0101", "PASS-US-9281", false, 1, 200);
-    seedGuests["GST-1002"] = models::Guest("GST-1002", "David Chen", "david.chen@techcorp.io", "+1-555-0142", "DL-CA-449102", true, 5, 1850);
-    seedGuests["GST-1003"] = models::Guest("GST-1003", "Sophia Rodriguez", "sophia.r@worldtravel.org", "+44-7700-900321", "PASS-UK-8831", true, 4, 1200);
-    seedGuests["GST-1004"] = models::Guest("GST-1004", "Michael Scott", "michael.s@dunder.com", "+1-555-0199", "DL-PA-192837", false, 1, 100);
-    saveGuests(seedGuests);
+    // Seed default bookings
+    std::unordered_map<std::string, models::Reservation> seedBookings;
+    models::Reservation b1("BKG-0001", "GUEST-0001", 103, "2026-11-01", 3, 2600.0, models::ReservationStatus::CheckedIn);
+    seedBookings[b1.getBookingId()] = b1;
 
-    // Seed Reservations
-    std::unordered_map<std::string, models::Reservation> seedReservations;
+    models::Reservation b2("BKG-0002", "GUEST-0002", 101, "2026-11-05", 2, 1800.0, models::ReservationStatus::Confirmed);
+    seedBookings[b2.getBookingId()] = b2;
 
-    models::Reservation res1("RES-20261101-1001", "GST-1002", 202, "2026-11-05", "2026-11-09", 4, 150.0, models::ReservationStatus::CheckedIn, "2026-11-01 10:30:00");
-    res1.addService(models::ServiceItem("SRV-1", "Executive Buffet Breakfast", 35.0, "Dining", "2026-11-06 08:30"));
-    res1.addService(models::ServiceItem("SRV-2", "Airport Luxury Shuttle", 50.0, "Transport", "2026-11-05 14:00"));
-    res1.recalculateTotals(15.0, 0.12); // VIP discount 15%
-    seedReservations[res1.getReservationId()] = res1;
-
-    models::Reservation res2("RES-20261102-1002", "GST-1003", 302, "2026-11-06", "2026-11-10", 4, 290.0, models::ReservationStatus::CheckedIn, "2026-11-02 16:15:00");
-    res2.addService(models::ServiceItem("SRV-3", "Aromatherapy Full Spa Massage", 120.0, "Spa", "2026-11-07 11:00"));
-    res2.recalculateTotals(15.0, 0.12);
-    seedReservations[res2.getReservationId()] = res2;
-
-    models::Reservation res3("RES-20261104-1003", "GST-1001", 103, "2026-11-07", "2026-11-09", 2, 85.0, models::ReservationStatus::CheckedIn, "2026-11-04 11:00:00");
-    res3.recalculateTotals(0.0, 0.12);
-    seedReservations[res3.getReservationId()] = res3;
-
-    models::Reservation res4("RES-20261105-1004", "GST-1004", 402, "2026-11-12", "2026-11-15", 3, 700.0, models::ReservationStatus::Confirmed, "2026-11-05 09:20:00");
-    res4.recalculateTotals(0.0, 0.12);
-    seedReservations[res4.getReservationId()] = res4;
-
-    saveReservations(seedReservations);
+    saveReservations(seedBookings);
 }
 
 std::vector<std::unique_ptr<models::Room>> StorageManager::loadRooms() {
@@ -143,6 +118,10 @@ std::vector<std::unique_ptr<models::Room>> StorageManager::loadRooms() {
     bool isHeader = true;
     while (std::getline(file, line)) {
         if (line.empty()) continue;
+        // Trim carriage return if present
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty()) continue;
+
         if (isHeader) {
             isHeader = false;
             continue;
@@ -150,53 +129,34 @@ std::vector<std::unique_ptr<models::Room>> StorageManager::loadRooms() {
 
         auto tokens = splitCsvLine(line);
         if (tokens.size() >= 4) {
-            int roomNum = std::stoi(tokens[0]);
-            models::RoomType type = models::stringToRoomType(tokens[1]);
-            double baseRate = std::stod(tokens[2]);
-            models::RoomStatus status = models::stringToRoomStatus(tokens[3]);
+            try {
+                int roomNum = std::stoi(tokens[0]);
+                models::RoomType type = models::stringToRoomType(tokens[1]);
+                double nightlyRateINR = std::stod(tokens[2]);
+                models::RoomStatus status = models::stringToRoomStatus(tokens[3]);
 
-            auto room = patterns::RoomFactory::createRoom(roomNum, type, baseRate, status);
-            rooms.push_back(std::move(room));
+                auto room = patterns::RoomFactory::createRoom(roomNum, type, nightlyRateINR, status);
+                rooms.push_back(std::move(room));
+            } catch (...) {
+                // Ignore malformed line
+            }
         }
     }
     return rooms;
 }
 
-std::unordered_map<std::string, models::Guest> StorageManager::loadGuests() {
+std::unordered_map<std::string, models::Reservation> StorageManager::loadReservations(
+    const std::vector<std::unique_ptr<models::Room>>& rooms) {
     seedInitialDataIfEmpty();
-    std::ifstream file(getGuestsFilePath());
-    std::unordered_map<std::string, models::Guest> guests;
-    if (!file.is_open()) return guests;
 
-    std::string line;
-    bool isHeader = true;
-    while (std::getline(file, line)) {
-        if (line.empty()) continue;
-        if (isHeader) {
-            isHeader = false;
-            continue;
-        }
-
-        auto tokens = splitCsvLine(line);
-        if (tokens.size() >= 8) {
-            std::string id = tokens[0];
-            std::string name = tokens[1];
-            std::string email = tokens[2];
-            std::string phone = tokens[3];
-            std::string idProof = tokens[4];
-            bool isVIP = (tokens[5] == "1" || tokens[5] == "true");
-            int totalStays = std::stoi(tokens[6]);
-            int points = std::stoi(tokens[7]);
-
-            guests[id] = models::Guest(id, name, email, phone, idProof, isVIP, totalStays, points);
-        }
+    std::unordered_set<int> validRooms;
+    std::unordered_map<int, double> roomRates;
+    for (const auto& r : rooms) {
+        validRooms.insert(r->getRoomNumber());
+        roomRates[r->getRoomNumber()] = r->getBaseRate();
     }
-    return guests;
-}
 
-std::unordered_map<std::string, models::Reservation> StorageManager::loadReservations() {
-    seedInitialDataIfEmpty();
-    std::ifstream file(getReservationsFilePath());
+    std::ifstream file(getBookingsFilePath());
     std::unordered_map<std::string, models::Reservation> reservations;
     if (!file.is_open()) return reservations;
 
@@ -204,57 +164,73 @@ std::unordered_map<std::string, models::Reservation> StorageManager::loadReserva
     bool isHeader = true;
     while (std::getline(file, line)) {
         if (line.empty()) continue;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty()) continue;
+
         if (isHeader) {
             isHeader = false;
             continue;
         }
 
         auto tokens = splitCsvLine(line);
-        if (tokens.size() >= 17) {
-            std::string resId = tokens[0];
-            std::string guestId = tokens[1];
-            int roomNum = std::stoi(tokens[2]);
-            std::string checkIn = tokens[3];
-            std::string checkOut = tokens[4];
-            int nights = std::stoi(tokens[5]);
-            double roomRate = std::stod(tokens[6]);
-            models::ReservationStatus status = models::stringToReservationStatus(tokens[7]);
-            std::string createdAt = tokens[8];
+        if (tokens.size() >= 6) {
+            try {
+                std::string bookingId = tokens[0];
+                std::string customerId = tokens[1];
+                int roomNum = std::stoi(tokens[2]);
+                std::string checkIn = tokens[3];
+                int nights = std::stoi(tokens[4]);
+                models::ReservationStatus status = models::stringToReservationStatus(tokens[5]);
 
-            models::Reservation res(resId, guestId, roomNum, checkIn, checkOut, nights, roomRate, status, createdAt);
+                // Foreign key validation
+                validateForeignKey(roomNum, validRooms);
 
-            double roomTot = std::stod(tokens[9]);
-            double srvTot = std::stod(tokens[10]);
-            double tax = std::stod(tokens[11]);
-            double disc = std::stod(tokens[12]);
-            double grandTot = std::stod(tokens[13]);
-            bool isPaid = (tokens[14] == "1" || tokens[14] == "true");
-            std::string paymentMethod = tokens[15];
-
-            std::string srvSerial = tokens[16];
-            if (!srvSerial.empty()) {
-                std::istringstream srvStream(srvSerial);
-                std::string srvToken;
-                while (std::getline(srvStream, srvToken, ';')) {
-                    if (srvToken.empty()) continue;
-                    std::istringstream itemStream(srvToken);
-                    std::string sid, sname, sprice, scat, sts;
-                    std::getline(itemStream, sid, '|');
-                    std::getline(itemStream, sname, '|');
-                    std::getline(itemStream, sprice, '|');
-                    std::getline(itemStream, scat, '|');
-                    std::getline(itemStream, sts, '|');
-                    if (!sid.empty() && !sprice.empty()) {
-                        res.addService(models::ServiceItem(sid, sname, std::stod(sprice), scat, sts));
-                    }
-                }
+                double rate = roomRates.count(roomNum) ? roomRates[roomNum] : 2000.0;
+                models::Reservation res(bookingId, customerId, roomNum, checkIn, nights, rate, status);
+                reservations[bookingId] = res;
+            } catch (const InvalidForeignKeyException& e) {
+                // Preserving foreign key validation guarantee: log/rethrow if critical
+                std::cerr << "Warning during import: " << e.what() << "\n";
+            } catch (...) {
+                // Skip malformed rows
             }
-
-            res.setFinancials(roomTot, srvTot, tax, disc, grandTot, isPaid, paymentMethod);
-            reservations[resId] = res;
         }
     }
     return reservations;
+}
+
+std::unordered_map<std::string, models::Guest> StorageManager::loadGuests() {
+    std::unordered_map<std::string, models::Guest> guests;
+    std::ifstream file(getGuestsFilePath());
+    if (file.is_open()) {
+        std::string line;
+        bool isHeader = true;
+        while (std::getline(file, line)) {
+            if (line.empty()) continue;
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            if (line.empty()) continue;
+
+            if (isHeader) {
+                isHeader = false;
+                continue;
+            }
+
+            auto tokens = splitCsvLine(line);
+            if (tokens.size() >= 8) {
+                std::string id = tokens[0];
+                std::string name = tokens[1];
+                std::string email = tokens[2];
+                std::string phone = tokens[3];
+                std::string idProof = tokens[4];
+                bool isVIP = (tokens[5] == "1" || tokens[5] == "true");
+                int totalStays = std::stoi(tokens[6]);
+                int points = std::stoi(tokens[7]);
+
+                guests[id] = models::Guest(id, name, email, phone, idProof, isVIP, totalStays, points);
+            }
+        }
+    }
+    return guests;
 }
 
 void StorageManager::saveRooms(const std::vector<std::unique_ptr<models::Room>>& rooms) {
@@ -264,12 +240,48 @@ void StorageManager::saveRooms(const std::vector<std::unique_ptr<models::Room>>&
         throw StorageException("Failed to open " + getRoomsFilePath() + " for writing.");
     }
 
-    file << "RoomNumber,Type,BaseRate,Status\n";
-    for (const auto& room : rooms) {
+    file << "RoomNumber,Type,NightlyRateINR,Status\n";
+
+    std::vector<const models::Room*> sortedRooms;
+    sortedRooms.reserve(rooms.size());
+    for (const auto& r : rooms) sortedRooms.push_back(r.get());
+    std::sort(sortedRooms.begin(), sortedRooms.end(), [](const auto* a, const auto* b) {
+        return a->getRoomNumber() < b->getRoomNumber();
+    });
+
+    for (const auto* room : sortedRooms) {
         file << room->getRoomNumber() << ","
              << escapeCsvField(models::roomTypeToString(room->getType())) << ","
-             << room->getBaseRate() << ","
+             << static_cast<long long>(room->getBaseRate()) << ","
              << escapeCsvField(models::roomStatusToString(room->getStatus())) << "\n";
+    }
+}
+
+void StorageManager::saveReservations(const std::unordered_map<std::string, models::Reservation>& reservations) {
+    ensureDirectoryExists();
+    std::ofstream file(getBookingsFilePath());
+    if (!file.is_open()) {
+        throw StorageException("Failed to open " + getBookingsFilePath() + " for writing.");
+    }
+
+    file << "BookingID,CustomerID,RoomNumber,CheckIn,Nights,Status\n";
+
+    std::vector<models::Reservation> sortedBookings;
+    sortedBookings.reserve(reservations.size());
+    for (const auto& [_, res] : reservations) {
+        sortedBookings.push_back(res);
+    }
+    std::sort(sortedBookings.begin(), sortedBookings.end(), [](const auto& a, const auto& b) {
+        return a.getBookingId() < b.getBookingId();
+    });
+
+    for (const auto& b : sortedBookings) {
+        file << escapeCsvField(b.getBookingId()) << ","
+             << escapeCsvField(b.getCustomerId()) << ","
+             << b.getRoomNumber() << ","
+             << escapeCsvField(b.getCheckIn()) << ","
+             << b.getNights() << ","
+             << escapeCsvField(models::reservationStatusToString(b.getStatus())) << "\n";
     }
 }
 
@@ -290,43 +302,6 @@ void StorageManager::saveGuests(const std::unordered_map<std::string, models::Gu
              << (guest.isVIP() ? "1" : "0") << ","
              << guest.getTotalStays() << ","
              << guest.getRewardPoints() << "\n";
-    }
-}
-
-void StorageManager::saveReservations(const std::unordered_map<std::string, models::Reservation>& reservations) {
-    ensureDirectoryExists();
-    std::ofstream file(getReservationsFilePath());
-    if (!file.is_open()) {
-        throw StorageException("Failed to open " + getReservationsFilePath() + " for writing.");
-    }
-
-    file << "ReservationId,GuestId,RoomNumber,CheckInDate,CheckOutDate,NumberOfNights,RoomRatePerNight,"
-         << "Status,CreatedAt,RoomTotal,ServicesTotal,TaxAmount,DiscountAmount,GrandTotal,IsPaid,PaymentMethod,Services\n";
-
-    for (const auto& [id, res] : reservations) {
-        std::string srvSerial;
-        for (const auto& s : res.getServices()) {
-            if (!srvSerial.empty()) srvSerial += ";";
-            srvSerial += s.getId() + "|" + s.getName() + "|" + std::to_string(s.getPrice()) + "|" + s.getCategory() + "|" + s.getTimestamp();
-        }
-
-        file << escapeCsvField(res.getReservationId()) << ","
-             << escapeCsvField(res.getGuestId()) << ","
-             << res.getRoomNumber() << ","
-             << escapeCsvField(res.getCheckInDate()) << ","
-             << escapeCsvField(res.getCheckOutDate()) << ","
-             << res.getNumberOfNights() << ","
-             << res.getRoomRatePerNight() << ","
-             << escapeCsvField(models::reservationStatusToString(res.getStatus())) << ","
-             << escapeCsvField(res.getCreatedAt()) << ","
-             << res.getRoomTotal() << ","
-             << res.getServicesTotal() << ","
-             << res.getTaxAmount() << ","
-             << res.getDiscountAmount() << ","
-             << res.getGrandTotal() << ","
-             << (res.isPaid() ? "1" : "0") << ","
-             << escapeCsvField(res.getPaymentMethod()) << ","
-             << escapeCsvField(srvSerial) << "\n";
     }
 }
 

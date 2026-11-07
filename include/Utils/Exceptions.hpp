@@ -41,6 +41,12 @@ public:
         : HotelException("Invalid Operation: " + message) {}
 };
 
+class InvalidForeignKeyException : public HotelException {
+public:
+    explicit InvalidForeignKeyException(const std::string& field, const std::string& value)
+        : HotelException("Foreign Key Constraint Violation: " + field + " '" + value + "' does not exist.") {}
+};
+
 class StorageException : public HotelException {
 public:
     explicit StorageException(const std::string& message)

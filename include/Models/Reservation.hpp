@@ -9,9 +9,10 @@ namespace hotel::models {
 enum class ReservationStatus {
     Confirmed,
     CheckedIn,
-    CheckedOut,
+    Completed,
     Cancelled
 };
+constexpr ReservationStatus CheckedOut = ReservationStatus::Completed;
 
 std::string reservationStatusToString(ReservationStatus status);
 ReservationStatus stringToReservationStatus(const std::string& str);
@@ -24,13 +25,22 @@ public:
                 double roomRatePerNight, ReservationStatus status = ReservationStatus::Confirmed,
                 std::string createdAt = "");
 
+    // Alternative constructor for standard Booking format (CheckIn + Nights)
+    Reservation(std::string bookingId, std::string customerId, int roomNumber,
+                std::string checkInDate, int nights,
+                double roomRatePerNight, ReservationStatus status = ReservationStatus::Confirmed);
+
     // Getters
     [[nodiscard]] const std::string& getReservationId() const { return reservationId_; }
+    [[nodiscard]] const std::string& getBookingId() const { return reservationId_; }
     [[nodiscard]] const std::string& getGuestId() const { return guestId_; }
+    [[nodiscard]] const std::string& getCustomerId() const { return guestId_; }
     [[nodiscard]] int getRoomNumber() const { return roomNumber_; }
     [[nodiscard]] const std::string& getCheckInDate() const { return checkInDate_; }
+    [[nodiscard]] const std::string& getCheckIn() const { return checkInDate_; }
     [[nodiscard]] const std::string& getCheckOutDate() const { return checkOutDate_; }
     [[nodiscard]] int getNumberOfNights() const { return numberOfNights_; }
+    [[nodiscard]] int getNights() const { return numberOfNights_; }
     [[nodiscard]] double getRoomRatePerNight() const { return roomRatePerNight_; }
     [[nodiscard]] ReservationStatus getStatus() const { return status_; }
     [[nodiscard]] const std::vector<ServiceItem>& getServices() const { return services_; }

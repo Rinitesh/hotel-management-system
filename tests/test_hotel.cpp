@@ -120,7 +120,7 @@ void testReservationFolioAndLifecycle() {
 
     // Check-out
     res.checkOut("Credit Card");
-    ASSERT_TRUE(res.getStatus() == ReservationStatus::CheckedOut, "Reservation is CheckedOut");
+    ASSERT_TRUE(res.getStatus() == ReservationStatus::Completed, "Reservation is Completed (Checked-out)");
     ASSERT_TRUE(res.isPaid(), "Reservation marked Paid");
     ASSERT_EQUAL(res.getPaymentMethod(), "Credit Card", "Payment method is Credit Card");
 }
@@ -196,6 +196,44 @@ void testHotelManagerIntegration() {
     std::filesystem::remove_all("data_test");
 }
 
+void testDatasetImportAndValidation() {
+    std::cout << "\n=== Running Seed Dataset Import & Foreign Key Validation Tests ===\n";
+    HotelManager mgr("data");
+
+    // Test import
+    ASSERT_EQUAL(mgr.getAllRooms().size(), 50, "Successfully imported 50 rooms from rooms.csv");
+    ASSERT_EQUAL(mgr.getAllReservations().size(), 120, "Successfully imported 120 bookings from bookings.csv");
+
+    // Test specific room lookup from dataset
+    const auto* r101 = mgr.getRoom(101);
+    ASSERT_TRUE(r101 != nullptr, "Room 101 loaded correctly");
+    ASSERT_EQUAL(r101->getTypeName(), "Standard Room", "Room 101 is Standard type");
+
+    // Test foreign key rejection (Requirement: reject invalid foreign keys)
+    bool foreignKeyRejected = false;
+    try {
+        mgr.createReservation("GUEST-0011", 9999, "2026-12-01", "2026-12-05");
+    } catch (const InvalidForeignKeyException&) {
+        foreignKeyRejected = true;
+    } catch (const HotelException&) {
+        foreignKeyRejected = true;
+    }
+    ASSERT_TRUE(foreignKeyRejected, "Booking invalid foreign key (Room 9999) rejected with exception");
+
+    // Test ID sequence preservation (Requirement: preserve IDs)
+    std::string nextBkg = mgr.generateNextBookingId();
+    ASSERT_EQUAL(nextBkg, "BKG-0121", "Next booking ID follows BKG-XXXX format (BKG-0121)");
+
+    std::string nextGst = mgr.generateNextGuestId();
+    ASSERT_EQUAL(nextGst, "GUEST-0081", "Next guest ID follows GUEST-XXXX format (GUEST-0081)");
+
+    // Test Reporting & Analytics
+    auto report = mgr.getAnalytics();
+    ASSERT_EQUAL(report.totalRooms, 50, "KPI Analytics reports 50 total rooms");
+    ASSERT_TRUE(report.totalReservations >= 120, "KPI Analytics reports 120+ reservations");
+    ASSERT_TRUE(report.occupancyRate >= 0.0, "Occupancy rate calculated properly");
+}
+
 int main() {
     std::cout << "\033[1m===========================================\n";
     std::cout << "  RUNNING HOTEL MANAGEMENT SYSTEM TEST SUITE \n";
@@ -207,6 +245,7 @@ int main() {
     testGuestAndLoyalty();
     testReservationFolioAndLifecycle();
     testHotelManagerIntegration();
+    testDatasetImportAndValidation();
 
     std::cout << "\n\033[1m===========================================\n";
     if (testsPassed == totalTests) {

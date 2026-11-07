@@ -1,5 +1,6 @@
 #include "Models/Reservation.hpp"
 #include "Utils/Exceptions.hpp"
+#include "Utils/DateTimeUtils.hpp"
 #include <algorithm>
 #include <numeric>
 #include <utility>
@@ -9,8 +10,8 @@ namespace hotel::models {
 std::string reservationStatusToString(ReservationStatus status) {
     switch (status) {
         case ReservationStatus::Confirmed: return "Confirmed";
-        case ReservationStatus::CheckedIn: return "CheckedIn";
-        case ReservationStatus::CheckedOut: return "CheckedOut";
+        case ReservationStatus::CheckedIn: return "Checked-in";
+        case ReservationStatus::Completed: return "Completed";
         case ReservationStatus::Cancelled: return "Cancelled";
     }
     return "Unknown";
@@ -20,7 +21,7 @@ ReservationStatus stringToReservationStatus(const std::string& str) {
     std::string s = str;
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
     if (s == "checkedin" || s == "checked-in" || s == "checked_in") return ReservationStatus::CheckedIn;
-    if (s == "checkedout" || s == "checked-out" || s == "checked_out") return ReservationStatus::CheckedOut;
+    if (s == "completed" || s == "checkedout" || s == "checked-out" || s == "checked_out") return ReservationStatus::Completed;
     if (s == "cancelled" || s == "canceled") return ReservationStatus::Cancelled;
     return ReservationStatus::Confirmed;
 }
@@ -40,9 +41,24 @@ Reservation::Reservation(std::string reservationId, std::string guestId, int roo
     recalculateTotals(0.0, 0.12);
 }
 
+Reservation::Reservation(std::string bookingId, std::string customerId, int roomNumber,
+                         std::string checkInDate, int nights,
+                         double roomRatePerNight, ReservationStatus status)
+    : reservationId_(std::move(bookingId)),
+      guestId_(std::move(customerId)),
+      roomNumber_(roomNumber),
+      checkInDate_(checkInDate),
+      checkOutDate_(utils::DateTimeUtils::addDaysToDate(checkInDate, nights)),
+      numberOfNights_(std::max(1, nights)),
+      roomRatePerNight_(roomRatePerNight),
+      status_(status),
+      createdAt_(utils::DateTimeUtils::getCurrentTimestamp()) {
+    recalculateTotals(0.0, 0.12);
+}
+
 void Reservation::addService(const ServiceItem& item) {
-    if (status_ == ReservationStatus::Cancelled || status_ == ReservationStatus::CheckedOut) {
-        throw InvalidOperationException("Cannot add services to a cancelled or checked-out reservation.");
+    if (status_ == ReservationStatus::Cancelled || status_ == ReservationStatus::Completed) {
+        throw InvalidOperationException("Cannot add services to a cancelled or completed reservation.");
     }
     services_.push_back(item);
     recalculateTotals();
@@ -74,14 +90,14 @@ void Reservation::checkOut(const std::string& paymentMethod) {
     if (status_ != ReservationStatus::CheckedIn) {
         throw InvalidOperationException("Only checked-in reservations can be checked out.");
     }
-    status_ = ReservationStatus::CheckedOut;
+    status_ = ReservationStatus::Completed;
     isPaid_ = true;
     paymentMethod_ = paymentMethod;
 }
 
 void Reservation::cancel() {
-    if (status_ == ReservationStatus::CheckedOut) {
-        throw InvalidOperationException("Cannot cancel a completed (checked out) reservation.");
+    if (status_ == ReservationStatus::Completed) {
+        throw InvalidOperationException("Cannot cancel a completed booking.");
     }
     status_ = ReservationStatus::Cancelled;
 }

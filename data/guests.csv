@@ -1,5 +1,0 @@
-GuestId,Name,Email,Phone,IdProof,IsVIP,TotalStays,RewardPoints
-GST-1001,Alice Morgan,alice.m@example.com,+1-555-0101,PASS-US-9281,0,1,200
-GST-1002,David Chen,david.chen@techcorp.io,+1-555-0142,DL-CA-449102,1,5,1850
-GST-1003,Sophia Rodriguez,sophia.r@worldtravel.org,+44-7700-900321,PASS-UK-8831,1,4,1200
-GST-1004,Michael Scott,michael.s@dunder.com,+1-555-0199,DL-PA-192837,0,1,100

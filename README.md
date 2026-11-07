@@ -2,7 +2,7 @@
 
 [![Language: C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg?style=flat&logo=c%2B%2B)](https://en.cppreference.com/w/cpp/17)
 [![Build System: CMake](https://img.shields.io/badge/Build-CMake%203.16+-orange.svg?logo=cmake)](https://cmake.org)
-[![Tests: 43 Passed](https://img.shields.io/badge/Tests-43%2F43%20Passing-brightgreen.svg)](#test-suite)
+[![Tests: 53 Passed](https://img.shields.io/badge/Tests-53%2F53%20Passing-brightgreen.svg)](#test-suite)
 [![Platform: macOS / Linux / Windows](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)](#installation--build)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -43,8 +43,8 @@ An enterprise-grade, modular Hotel Property Management System (PMS) built from s
 ┌───────▼────────┐     ┌───────▼────────┐     ┌───────▼────────┐
 │  Room Hierarchy│     │  Reservation & │     │ CSV Databases  │
 │  • Standard    │     │  Guest Folios  │     │ • rooms.csv    │
-│  • Deluxe      │     │  • Line items  │     │ • guests.csv   │
-│  • Suite       │     │  • Tax & disc  │     │ • reservations │
+│  • Deluxe      │     │  • Line items  │     │ • bookings.csv │
+│  • Suite       │     │  • Tax & disc  │     │ • README.txt   │
 │  • Presidential│     │  • Loyalty pts │     └────────────────┘
 └────────────────┘     └────────────────┘
 ```
@@ -137,11 +137,11 @@ This project was built specifically to showcase clean, production-level C++ engi
 │   │   └── TerminalUI.cpp
 │   └── main.cpp                # Interactive CLI application
 ├── tests/
-│   └── test_hotel.cpp          # Comprehensive unit test suite (43 tests)
-└── data/                       # Persistent database files
-    ├── rooms.csv
-    ├── guests.csv
-    └── reservations.csv
+│   └── test_hotel.cpp          # Comprehensive unit test suite (53 tests)
+└── data/                       # Persistent benchmark database
+    ├── README.txt              # Dataset specification
+    ├── rooms.csv               # 50 hotel rooms with INR rates
+    └── bookings.csv            # 120 customer bookings & lifecycle
 ```
 
 ---

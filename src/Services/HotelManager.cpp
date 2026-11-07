@@ -29,12 +29,19 @@ void HotelManager::setupAvailableServices() {
 void HotelManager::initialize() {
     rooms_ = storage_.loadRooms();
     guests_ = storage_.loadGuests();
-    reservations_ = storage_.loadReservations();
+    reservations_ = storage_.loadReservations(rooms_);
+
+    // Auto-populate guest profiles for any customer IDs in bookings
+    for (const auto& [_, res] : reservations_) {
+        const std::string& cid = res.getCustomerId();
+        if (guests_.find(cid) == guests_.end()) {
+            guests_[cid] = models::Guest(cid, "Customer " + cid, cid + "@hotel.com", "+91-9876543210", "ID-" + cid, false, 1, 100);
+        }
+    }
 }
 
 void HotelManager::persist() {
     storage_.saveRooms(rooms_);
-    storage_.saveGuests(guests_);
     storage_.saveReservations(reservations_);
 }
 
@@ -95,7 +102,7 @@ models::Guest& HotelManager::registerGuest(std::string name, std::string email, 
     if (name.empty()) {
         throw InvalidOperationException("Guest name cannot be empty.");
     }
-    std::string guestId = utils::DateTimeUtils::generateId("GST");
+    std::string guestId = generateNextGuestId();
     models::Guest guest(guestId, std::move(name), std::move(email), std::move(phone), std::move(idProof), false, 0, 0);
     guests_[guestId] = guest;
     persist();
@@ -156,7 +163,7 @@ std::string HotelManager::createReservation(const std::string& guestId, int room
 
     auto* room = getRoom(roomNumber);
     if (!room) {
-        throw RoomNotFoundException(roomNumber);
+        throw InvalidForeignKeyException("RoomNumber", std::to_string(roomNumber));
     }
 
     if (room->getStatus() != models::RoomStatus::Available) {
@@ -185,7 +192,7 @@ std::string HotelManager::createReservation(const std::string& guestId, int room
 
     double discountPct = guest->isVIP() ? 15.0 : (nights >= 7 ? 10.0 : 0.0);
 
-    std::string resId = utils::DateTimeUtils::generateId("RES");
+    std::string resId = generateNextBookingId();
     models::Reservation res(resId, guestId, roomNumber, checkInDate, checkOutDate,
                             nights, room->getBaseRate(), models::ReservationStatus::Confirmed,
                             utils::DateTimeUtils::getCurrentTimestamp());
@@ -332,7 +339,7 @@ AnalyticsReport HotelManager::getAnalytics() const {
     }
 
     for (const auto& [_, res] : reservations_) {
-        if (res.getStatus() == models::ReservationStatus::CheckedOut ||
+        if (res.getStatus() == models::ReservationStatus::Completed ||
             res.getStatus() == models::ReservationStatus::CheckedIn) {
             report.totalRevenue += res.getGrandTotal();
         }
@@ -380,8 +387,8 @@ std::string HotelManager::generateInvoice(const std::string& reservationId) cons
        << (room ? (" (" + room->getTypeName() + ")") : "") << "\n";
     ss << "   Stay Period  : " << res->getCheckInDate() << " to " << res->getCheckOutDate()
        << " (" << res->getNumberOfNights() << " night" << (res->getNumberOfNights() > 1 ? "s" : "") << ")\n";
-    ss << "   Nightly Rate : $" << res->getRoomRatePerNight() << "\n";
-    ss << "   Room Subtotal: $" << res->getRoomTotal() << "\n";
+    ss << "   Nightly Rate : INR " << static_cast<long long>(res->getRoomRatePerNight()) << "\n";
+    ss << "   Room Subtotal: INR " << static_cast<long long>(res->getRoomTotal()) << "\n";
 
     if (!res->getServices().empty()) {
         ss << "------------------------------------------------------------------------\n";
@@ -390,26 +397,56 @@ std::string HotelManager::generateInvoice(const std::string& reservationId) cons
         for (const auto& s : res->getServices()) {
             ss << "   " << idx++ << ". [" << s.getCategory() << "] "
                << std::left << std::setw(32) << s.getName()
-               << " $" << std::right << std::setw(8) << s.getPrice() << "\n";
+               << " INR " << std::right << std::setw(8) << static_cast<long long>(s.getPrice()) << "\n";
         }
-        ss << "   Services Subtotal: $" << res->getServicesTotal() << "\n";
+        ss << "   Services Subtotal: INR " << static_cast<long long>(res->getServicesTotal()) << "\n";
     }
 
     ss << "------------------------------------------------------------------------\n";
     ss << " FINANCIAL SUMMARY:\n";
     double rawSubtotal = res->getRoomTotal() + res->getServicesTotal();
-    ss << "   Gross Total       : $" << std::setw(10) << rawSubtotal << "\n";
+    ss << "   Gross Total       : INR " << std::setw(10) << rawSubtotal << "\n";
     if (res->getDiscountAmount() > 0.0) {
-        ss << "   Discount Applied  : -$" << std::setw(9) << res->getDiscountAmount() << "\n";
+        ss << "   Discount Applied  : -INR " << std::setw(9) << res->getDiscountAmount() << "\n";
     }
-    ss << "   Tax & Surchg (12%): $" << std::setw(10) << res->getTaxAmount() << "\n";
+    ss << "   Tax & Surchg (12%): INR " << std::setw(10) << res->getTaxAmount() << "\n";
     ss << "   -----------------------------------------\n";
-    ss << "   NET AMOUNT DUE    : $" << std::setw(10) << res->getGrandTotal() << "\n";
+    ss << "   NET AMOUNT DUE    : INR " << std::setw(10) << res->getGrandTotal() << "\n";
     ss << "========================================================================\n";
     ss << "               Thank you for staying at Grand Horizon!                  \n";
     ss << "========================================================================\n";
 
     return ss.str();
+}
+
+std::string HotelManager::generateNextBookingId() const {
+    int maxId = 0;
+    for (const auto& [id, _] : reservations_) {
+        if (id.rfind("BKG-", 0) == 0) {
+            try {
+                int num = std::stoi(id.substr(4));
+                if (num > maxId) maxId = num;
+            } catch (...) {}
+        }
+    }
+    std::ostringstream oss;
+    oss << "BKG-" << std::setw(4) << std::setfill('0') << (maxId + 1);
+    return oss.str();
+}
+
+std::string HotelManager::generateNextGuestId() const {
+    int maxId = 0;
+    for (const auto& [id, _] : guests_) {
+        if (id.rfind("GUEST-", 0) == 0) {
+            try {
+                int num = std::stoi(id.substr(6));
+                if (num > maxId) maxId = num;
+            } catch (...) {}
+        }
+    }
+    std::ostringstream oss;
+    oss << "GUEST-" << std::setw(4) << std::setfill('0') << (maxId + 1);
+    return oss.str();
 }
 
 } // namespace hotel::services
